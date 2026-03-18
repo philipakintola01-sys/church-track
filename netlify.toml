@@ -1,4 +1,5 @@
 # netlify.toml
+
 [build]
   command   = "npm run build"
   publish   = "dist"
@@ -8,3 +9,54 @@
   from   = "/*"
   to     = "/index.html"
   status = 200
+
+# ── DEFCON-level security headers (applied to every response) ─────────────────
+#
+#  #1  CLICKJACKING / UI REDRESSING
+#      Attackers embed your site in a hidden iframe, trick users into clicking
+#      buttons they can't see (e.g. "Like", "Transfer funds").
+#      Fix: refuse to be framed by anyone.
+#
+#  #2  MIME-TYPE SNIFFING ATTACK
+#      Browser ignores Content-Type and executes a file as a different type
+#      (e.g. a PNG that contains JS). Fix: force browsers to honour MIME type.
+#
+#  #3  XSS — CROSS-SITE SCRIPTING
+#      Injected scripts run in your domain's context, stealing sessions/data.
+#      Fix: Content-Security-Policy restricts exactly which origins can run
+#      scripts, load styles, or open network connections.
+#
+#  #4  SSL STRIPPING / MAN-IN-THE-MIDDLE
+#      Attacker downgrades HTTPS→HTTP on first request, intercepts everything.
+#      Fix: HSTS tells browsers to ONLY use HTTPS for the next year, even
+#      on the very first visit (after the first).
+#
+#  #5  INFORMATION LEAKAGE VIA REFERRER
+#      Sensitive URL paths/tokens sent in the Referer header to third-party
+#      requests, leaking session info.  Fix: strict-origin-when-cross-origin
+#      sends only the origin (no path/query) on cross-origin requests.
+# ─────────────────────────────────────────────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+
+    # #1 — Anti-Clickjacking
+    X-Frame-Options = "DENY"
+
+    # #2 — MIME sniffing prevention
+    X-Content-Type-Options = "nosniff"
+
+    # #3 — Content Security Policy (XSS + injection)
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data: blob:; font-src 'self' data:; frame-ancestors 'none';"
+
+    # #4 — HTTP Strict Transport Security (MITM / SSL stripping)
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+
+    # #5 — Referrer information leakage
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+    # Bonus: browser-level XSS filter (legacy browsers)
+    X-XSS-Protection = "1; mode=block"
+
+    # Bonus: lock down browser feature APIs
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
